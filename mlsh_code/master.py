@@ -11,7 +11,7 @@ import numpy as np
 # from tinkerbell import logger
 import pickle
 
-def start(callback, args, workerseed, rank, comm):
+def start(callback, args, workerseed, rank, comm, startx = 0):
     env = gym.make(args.task)
     env.seed(workerseed)
     np.random.seed(workerseed)
@@ -39,9 +39,9 @@ def start(callback, args, workerseed, rank, comm):
 
     learner = Learner(env, policy, old_policy, sub_policies, old_sub_policies, comm, clip_param=0.2, entcoeff=0, optim_epochs=10, optim_stepsize=3e-5, optim_batchsize=64)
     rollout = rollouts.traj_segment_generator(policy, sub_policies, env, macro_duration, num_rollouts, stochastic=True, args=args)
+    hasRandomizeCorrect = hasattr(env,"env") and hasattr(env.env,"randomizeCorrect")
 
-
-    for x in range(10000):
+    for x in range(startx,10000):
         callback(x)
         if x == 0:
             learner.syncSubpolicies()
@@ -50,12 +50,11 @@ def start(callback, args, workerseed, rank, comm):
 
         policy.reset()
         learner.syncMasterPolicies()
-
-        env.env.randomizeCorrect()
-        shared_goal = comm.bcast(env.env.realgoal, root=0)
-        env.env.realgoal = shared_goal
-
-        print("It is iteration %d so i'm changing the goal to %s" % (x, env.env.realgoal))
+        if hasRandomizeCorrect:
+            env.env.randomizeCorrect()
+            shared_goal = comm.bcast(env.env.realgoal, root=0)
+            env.env.realgoal = shared_goal
+            print("It is iteration %d so i'm changing the goal to %s" % (x, env.env.realgoal))
         mini_ep = 0 if x > 0 else -1 * (rank % 10)*int(warmup_time+train_time / 10)
         # mini_ep = 0
 

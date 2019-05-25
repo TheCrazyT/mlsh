@@ -1,5 +1,6 @@
 import argparse
 import tensorflow as tf
+
 parser = argparse.ArgumentParser()
 parser.add_argument('savename', type=str)
 parser.add_argument('--task', type=str)
@@ -45,9 +46,10 @@ LOGDIR = osp.join('/root/results' if sys.platform.startswith('linux') else '/tmp
 
 def callback(it):
     if MPI.COMM_WORLD.Get_rank()==0:
-        if it % 5 == 0 and it > 3 and not replay:
+        if it > 1 and not replay:
             fname = osp.join("savedir/", 'checkpoints', '%.5i'%it)
             U.save_state(fname)
+
     if it == 0 and args.continue_iter is not None:
         fname = osp.join("savedir/"+args.savename+"/checkpoints/", str(args.continue_iter))
         U.load_state(fname)
@@ -73,8 +75,10 @@ def train():
     comm = MPI.COMM_WORLD.Create(theta_group)
     comm.Barrier()
     # comm = MPI.COMM_WORLD
-
-    master.start(callback, args=args, workerseed=workerseed, rank=rank, comm=comm)
+    startx = 0
+    if args.continue_iter is not None:
+        startx = int(args.continue_iter)
+    master.start(callback, args=args, workerseed=workerseed, rank=rank, comm=comm, startx=startx)
 
 def main():
     if MPI.COMM_WORLD.Get_rank() == 0 and osp.exists(LOGDIR):
