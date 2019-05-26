@@ -115,7 +115,7 @@ class Learner:
                 g = self.master_loss(batch["ob"], batch["ac"], batch["atarg"], batch["vtarg"])
                 
                 if WRITE_SCALAR:
-                    scalar_writer = tf.summary.FileWriter(osp.join("savedir/",'checkpoints', 'scalar'))
+                    scalar_writer = tf.summary.FileWriter(osp.join("savedir/",'checkpoints', 'scalar%d' % time.time()))
                     sess = U.get_session()
                     summ = self.calc_summary(batch["ob"], batch["ac"], batch["atarg"], batch["vtarg"])[0]
                     scalar_writer.add_summary(summ)
