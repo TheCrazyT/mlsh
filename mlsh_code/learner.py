@@ -10,7 +10,7 @@ from mpi4py import MPI
 from collections import deque
 from dataset import Dataset
 
-WRITE_HISTOGRAM = True
+WRITE_SCALAR = True
 
 class Learner:
     def __init__(self, env, policy, old_policy, sub_policies, old_sub_policies, comm, clip_param=0.2, entcoeff=0, optim_epochs=10, optim_stepsize=3e-4, optim_batchsize=64):
@@ -35,7 +35,7 @@ class Learner:
         self.master_policy_var_list = policy.get_trainable_variables()
         self.master_loss = U.function([ob, ac, atarg, ret], U.flatgrad(total_loss, self.master_policy_var_list))
         self.master_adam = MpiAdam(self.master_policy_var_list, comm=comm)
-        summ = tf.summary.histogram("total_loss", total_loss)
+        summ = tf.summary.scalar("total_loss", total_loss)
         self.calc_summary = U.function([ob, ac, atarg, ret],[summ])
 
 
@@ -114,12 +114,12 @@ class Learner:
             for batch in d.iterate_once(optim_batchsize):
                 g = self.master_loss(batch["ob"], batch["ac"], batch["atarg"], batch["vtarg"])
                 
-                if WRITE_HISTOGRAM:
-                    histo_writer = tf.summary.FileWriter(osp.join("savedir/",'checkpoints', 'histo'))
+                if WRITE_SCALAR:
+                    scalar_writer = tf.summary.FileWriter(osp.join("savedir/",'checkpoints', 'scalar'))
                     sess = U.get_session()
                     summ = self.calc_summary(batch["ob"], batch["ac"], batch["atarg"], batch["vtarg"])[0]
-                    histo_writer.add_summary(summ)
-                    histo_writer.close()
+                    scalar_writer.add_summary(summ)
+                    scalar_writer.close()
 
                 self.master_adam.update(g, 0.01, 1)
 
