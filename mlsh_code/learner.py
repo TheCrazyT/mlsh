@@ -24,6 +24,8 @@ class Learner:
         self.sub_policies = sub_policies
         ob_space = env.observation_space
         ac_space = env.action_space
+        if WRITE_SCALAR:
+            self.scalar_writer = tf.summary.FileWriter(osp.join("savedir/",'checkpoints', 'scalar%d' % time.time()))
 
         # for training theta
         # inputs for training theta
@@ -115,11 +117,9 @@ class Learner:
                 g = self.master_loss(batch["ob"], batch["ac"], batch["atarg"], batch["vtarg"])
                 
                 if WRITE_SCALAR:
-                    scalar_writer = tf.summary.FileWriter(osp.join("savedir/",'checkpoints', 'scalar%d' % time.time()))
                     sess = U.get_session()
                     summ = self.calc_summary(batch["ob"], batch["ac"], batch["atarg"], batch["vtarg"])[0]
-                    scalar_writer.add_summary(summ)
-                    scalar_writer.close()
+                    self.scalar_writer.add_summary(summ)
 
                 self.master_adam.update(g, 0.01, 1)
 
